@@ -108,7 +108,7 @@ export default function ListenPlayer({ sentences, islands }: {
     <div className="flex flex-col min-h-dvh max-w-2xl mx-auto bg-[#FDFCF8]">
       {/* Top bar */}
       <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-[#E7E0D5] bg-white">
-        <Link href="/" className="text-[#78716C] hover:text-[#1C1917] transition-colors p-1">
+        <Link href="/dashboard" className="text-[#78716C] hover:text-[#1C1917] transition-colors p-1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>

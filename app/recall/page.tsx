@@ -21,7 +21,7 @@ export default async function RecallPage() {
         </div>
         <h1 className="font-display text-2xl font-semibold text-[#1C1917] mb-2">All caught up!</h1>
         <p className="text-[#78716C] text-sm mb-8">No cards due for review right now.</p>
-        <Link href="/" className="text-sm text-[#C85A3A] hover:text-[#A84830] font-medium transition-colors">
+        <Link href="/dashboard" className="text-sm text-[#C85A3A] hover:text-[#A84830] font-medium transition-colors">
           ← Back to dashboard
         </Link>
       </main>

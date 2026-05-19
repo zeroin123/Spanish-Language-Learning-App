@@ -108,6 +108,36 @@ select {
   border: 1px solid transparent;
 }
 
+/* ── Animations ────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes floatA {
+  0%, 100% { transform: translateY(0px)   rotate(-4deg); }
+  50%       { transform: translateY(-14px) rotate(-4deg); }
+}
+@keyframes floatB {
+  0%, 100% { transform: translateY(0px)  rotate(3deg); }
+  50%       { transform: translateY(-9px) rotate(3deg); }
+}
+@keyframes floatC {
+  0%, 100% { transform: translateY(0px)   rotate(-1.5deg); }
+  50%       { transform: translateY(-11px) rotate(-1.5deg); }
+}
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Reduced motion ────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

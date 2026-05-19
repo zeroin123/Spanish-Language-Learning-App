@@ -18,7 +18,7 @@ export default async function IslandPage({ params }: { params: Promise<{ slug: s
     <main className="min-h-dvh px-4 py-8 max-w-3xl mx-auto">
       {/* Back */}
       <Link
-        href="/"
+        href="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors mb-8 group"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform">
