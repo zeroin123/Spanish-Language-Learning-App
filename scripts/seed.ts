@@ -1,8 +1,8 @@
 // Book ingestion script. Run: pnpm seed
-// Parses Colloquial_Spanish.md → populates SQLite with islands, sentences, vocab
-// Uses Node 24's built-in node:sqlite (no native compilation required)
+// Parses Colloquial_Spanish.md → populates DB with islands, sentences, vocab
+// Uses @libsql/client — works with local file: URL or remote Turso URL
 
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
 import { translateSentences } from '../lib/ai';
 import fs from 'fs';
 import path from 'path';
@@ -43,7 +43,6 @@ function isSpanish(text: string): boolean {
 
 // ─── Parse dialogues ──────────────────────────────────────────────────────────
 
-// Speaker-tagged line: ALL-CAPS name (possibly hyphenated), space, then speech
 const SPEAKER_RE = /^([A-Z][A-Z\-\s]{0,20}?)\s{1,3}([¿¡A-ZÁÉÍÓÚÜÑa-z_"'(].*)$/;
 
 function extractSpeakerLines(text: string): Array<{ speaker: string; line: string }> {
@@ -108,7 +107,6 @@ function extractVocabFromText(text: string): Array<{ spanish: string; english: s
       const trimmed = line.trim();
       if (!trimmed || trimmed.length > 120) continue;
       if (/^In this lesson|^The following|^Note|^Unless/.test(trimmed)) continue;
-      // Try multi-space split first, fall back to single-space with Spanish char detection
       let sp: string, en: string;
       const multiParts = trimmed.split(/\s{2,}/);
       if (multiParts.length >= 2) {
@@ -178,14 +176,14 @@ async function main() {
 
   const bookText = fs.readFileSync(bookPath, 'utf-8');
 
-  // Set up DB (uses Node 24 built-in sqlite)
-  const dbPath = path.join(process.cwd(), 'data', 'polyglot.db');
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  db.exec('PRAGMA journal_mode = WAL');
+  const dbUrl = process.env.TURSO_DATABASE_URL ?? `file:${path.join(process.cwd(), 'data', 'polyglot.db')}`;
+  if (dbUrl.startsWith('file:')) {
+    fs.mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
+  }
+  const db = createClient({ url: dbUrl, authToken: process.env.TURSO_AUTH_TOKEN });
 
   // Create tables
-  db.exec(`
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY DEFAULT 1,
       target_language TEXT NOT NULL DEFAULT 'Spanish',
@@ -246,7 +244,7 @@ async function main() {
   `);
 
   const now = new Date().toISOString();
-  db.prepare(`INSERT OR IGNORE INTO settings (id, created_at) VALUES (1, ?)`).run(now);
+  await db.execute({ sql: `INSERT OR IGNORE INTO settings (id, created_at) VALUES (1, ?)`, args: [now] });
 
   // ─── Split book into lesson chunks ────────────────────────────────────────
 
@@ -272,16 +270,17 @@ async function main() {
   // ─── Seed islands ─────────────────────────────────────────────────────────
 
   for (const def of ISLAND_DEFS) {
-    db.prepare(`
-      INSERT OR IGNORE INTO islands (id, slug, display_name, color, icon_emoji, source_lesson, sort_order, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(randomUUID(), def.slug, def.name, def.color, def.emoji, def.lesson, def.lesson, now);
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO islands (id, slug, display_name, color, icon_emoji, source_lesson, sort_order, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [randomUUID(), def.slug, def.name, def.color, def.emoji, def.lesson, def.lesson, now],
+    });
   }
 
   const islandByLesson = new Map<number, string>();
   for (const def of ISLAND_DEFS) {
-    const row = db.prepare('SELECT id FROM islands WHERE slug = ?').get(def.slug) as { id: string };
-    islandByLesson.set(def.lesson, row.id);
+    const { rows } = await db.execute({ sql: 'SELECT id FROM islands WHERE slug = ?', args: [def.slug] });
+    islandByLesson.set(def.lesson, rows[0].id as string);
   }
 
   // ─── Process each lesson ──────────────────────────────────────────────────
@@ -331,23 +330,25 @@ async function main() {
         }
       }
 
-      const insertStmt = db.prepare(`
-        INSERT OR IGNORE INTO sentences
-          (id, island_id, native, target, speaker, source, source_lesson_id, source_dialogue, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 'book', ?, ?, ?, ?)
-      `);
       for (const pair of pairs) {
         if (!pair.spanish.trim()) continue;
-        insertStmt.run(randomUUID(), islandId, pair.english || pair.spanish, pair.spanish, pair.speaker, num, dialogueNum, now, now);
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO sentences
+                  (id, island_id, native, target, speaker, source, source_lesson_id, source_dialogue, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'book', ?, ?, ?, ?)`,
+          args: [randomUUID(), islandId, pair.english || pair.spanish, pair.spanish, pair.speaker, num, dialogueNum, now, now],
+        });
         totalSentences++;
       }
     }
 
     // Vocabulary
     const vocabItems = extractVocabFromText(text);
-    const vocabInsert = db.prepare(`INSERT OR IGNORE INTO vocab_entries (id, lesson_id, spanish, english, source, created_at) VALUES (?, ?, ?, ?, 'lesson_vocab', ?)`);
     for (const item of vocabItems) {
-      vocabInsert.run(randomUUID(), num, item.spanish, item.english, now);
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO vocab_entries (id, lesson_id, spanish, english, source, created_at) VALUES (?, ?, ?, ?, 'lesson_vocab', ?)`,
+        args: [randomUUID(), num, item.spanish, item.english, now],
+      });
       totalVocab++;
     }
   }
@@ -355,10 +356,12 @@ async function main() {
   // Glossary
   if (glossaryText) {
     const glossaryItems = extractGlossary(glossaryText);
-    const glossInsert = db.prepare(`INSERT OR IGNORE INTO vocab_entries (id, lesson_id, spanish, english, part_of_speech, source, created_at) VALUES (?, NULL, ?, ?, ?, 'glossary', ?)`);
     let glossaryCount = 0;
     for (const item of glossaryItems) {
-      glossInsert.run(randomUUID(), item.spanish, item.english, item.partOfSpeech, now);
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO vocab_entries (id, lesson_id, spanish, english, part_of_speech, source, created_at) VALUES (?, NULL, ?, ?, ?, 'glossary', ?)`,
+        args: [randomUUID(), item.spanish, item.english, item.partOfSpeech, now],
+      });
       glossaryCount++;
     }
     console.log(`Glossary: ${glossaryCount} entries`);
@@ -366,9 +369,14 @@ async function main() {
   }
 
   // Summary
-  const islandCount = (db.prepare('SELECT COUNT(*) as c FROM islands').get() as { c: number }).c;
-  const sentenceCount = (db.prepare('SELECT COUNT(*) as c FROM sentences').get() as { c: number }).c;
-  const vocabCount = (db.prepare('SELECT COUNT(*) as c FROM vocab_entries').get() as { c: number }).c;
+  const [r1, r2, r3] = await Promise.all([
+    db.execute('SELECT COUNT(*) as c FROM islands'),
+    db.execute('SELECT COUNT(*) as c FROM sentences'),
+    db.execute('SELECT COUNT(*) as c FROM vocab_entries'),
+  ]);
+  const islandCount = r1.rows[0].c as number;
+  const sentenceCount = r2.rows[0].c as number;
+  const vocabCount = r3.rows[0].c as number;
 
   console.log(`\n✓ Ingested ${islandCount} islands, ${sentenceCount} sentence pairs, ${vocabCount} vocabulary entries.`);
   if (unmatchedPairs > 0) {

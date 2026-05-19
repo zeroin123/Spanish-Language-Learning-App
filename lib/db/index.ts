@@ -1,14 +1,13 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'path';
+import { createClient, type Client } from '@libsql/client';
 
-const dbPath = path.join(process.cwd(), 'data', 'polyglot.db');
+let _db: Client | null = null;
 
-let _db: DatabaseSync | null = null;
-
-export function getDb(): DatabaseSync {
+export function getDb(): Client {
   if (!_db) {
-    _db = new DatabaseSync(dbPath);
-    _db.exec('PRAGMA journal_mode = WAL');
+    _db = createClient({
+      url: process.env.TURSO_DATABASE_URL ?? 'file:./data/polyglot.db',
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    });
   }
   return _db;
 }

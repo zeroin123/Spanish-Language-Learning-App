@@ -5,10 +5,10 @@ import TtsButton from '@/components/tts-button';
 
 export default async function IslandPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const island = getIsland(slug);
+  const island = await getIsland(slug);
   if (!island) notFound();
 
-  const sentences = getIslandSentences(island.id);
+  const sentences = await getIslandSentences(island.id);
   const masteredCount = sentences.filter(s => s.mastered).length;
   const masteryPct = sentences.length > 0 ? Math.round((masteredCount / sentences.length) * 100) : 0;
 

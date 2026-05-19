@@ -2,10 +2,9 @@ import Link from 'next/link';
 import { getDueQueue, getTotalDueCount } from '@/lib/db/queries';
 import RecallSession from './RecallSession';
 
-export default function RecallPage() {
+export default async function RecallPage() {
   const SESSION_CAP = 30;
-  const cards = getDueQueue(SESSION_CAP);
-  const totalDue = getTotalDueCount();
+  const [cards, totalDue] = await Promise.all([getDueQueue(SESSION_CAP), getTotalDueCount()]);
 
   if (cards.length === 0) {
     return (

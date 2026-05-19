@@ -3,9 +3,9 @@ import { getDashboardStats, getIslandsWithStats, type IslandStat } from '@/lib/d
 
 export const dynamic = 'force-dynamic';
 
-export default function Dashboard() {
-  const stats = getDashboardStats();
-  const islands = getIslandsWithStats();
+export default async function Dashboard() {
+  const stats = await getDashboardStats();
+  const islands = await getIslandsWithStats();
 
   return (
     <main className="min-h-dvh px-4 py-10 max-w-4xl mx-auto">

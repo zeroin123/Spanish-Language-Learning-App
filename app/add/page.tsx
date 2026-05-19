@@ -1,8 +1,8 @@
 import { getIslandsWithStats } from '@/lib/db/queries';
 import AddForm from './AddForm';
 
-export default function AddPage() {
-  const islands = getIslandsWithStats();
+export default async function AddPage() {
+  const islands = await getIslandsWithStats();
   return (
     <main className="min-h-dvh px-4 py-8 max-w-2xl mx-auto">
       <div className="mb-8">

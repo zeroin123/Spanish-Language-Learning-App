@@ -22,40 +22,43 @@ export async function addSentencesAction(
 ): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
-  const stmt = db.prepare(`
-    INSERT INTO sentences (id, island_id, native, target, source, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
   for (const pair of pairs) {
     if (!pair.native.trim() || !pair.translated.trim()) continue;
-    stmt.run(randomUUID(), islandId, pair.native.trim(), pair.translated.trim(), source, now, now);
+    await db.execute({
+      sql: `INSERT INTO sentences (id, island_id, native, target, source, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [randomUUID(), islandId, pair.native.trim(), pair.translated.trim(), source, now, now],
+    });
   }
 }
 
 export async function gradeCardAction(id: string, grade: 0 | 1 | 2 | 3): Promise<void> {
   const db = getDb();
-  const row = db.prepare(
-    'SELECT interval, ease_factor, reps FROM sentences WHERE id = ?'
-  ).get(id) as { interval: number; ease_factor: number; reps: number } | null;
-  if (!row) return;
+  const { rows } = await db.execute({
+    sql: 'SELECT interval, ease_factor, reps FROM sentences WHERE id = ?',
+    args: [id],
+  });
+  if (rows.length === 0) return;
+  const row = rows[0];
 
   const updated = applyGrade(
-    { interval: row.interval, easeFactor: row.ease_factor, reps: row.reps },
+    { interval: row.interval as number, easeFactor: row.ease_factor as number, reps: row.reps as number },
     grade,
   );
 
-  db.prepare(`
-    UPDATE sentences
-    SET interval = ?, ease_factor = ?, reps = ?, next_review = ?, last_reviewed = ?, mastered = ?, updated_at = ?
-    WHERE id = ?
-  `).run(
-    updated.interval,
-    updated.easeFactor,
-    updated.reps,
-    updated.nextReview,
-    updated.lastReviewed,
-    updated.mastered ? 1 : 0,
-    updated.lastReviewed,
-    id,
-  );
+  await db.execute({
+    sql: `UPDATE sentences
+          SET interval = ?, ease_factor = ?, reps = ?, next_review = ?, last_reviewed = ?, mastered = ?, updated_at = ?
+          WHERE id = ?`,
+    args: [
+      updated.interval,
+      updated.easeFactor,
+      updated.reps,
+      updated.nextReview,
+      updated.lastReviewed,
+      updated.mastered ? 1 : 0,
+      updated.lastReviewed,
+      id,
+    ],
+  });
 }
