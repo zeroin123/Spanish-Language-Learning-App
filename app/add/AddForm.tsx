@@ -59,7 +59,7 @@ export default function AddForm({ islands }: { islands: Island[] }) {
     try {
       await addSentencesAction(pairs, islandId, tab === 'voice' ? 'user_voice' : 'user_typed');
       setStatus('done');
-      setTimeout(() => router.push('/'), 1200);
+      setTimeout(() => router.push('/dashboard'), 1200);
     } catch (e) { setError(String(e)); setStatus('preview'); }
   }
 
