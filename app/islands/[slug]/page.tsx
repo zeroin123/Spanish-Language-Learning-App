@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { getIsland, getIslandSentences, type SentenceRow } from '@/lib/db/queries';
 import TtsButton from '@/components/tts-button';
 
+export const dynamic = 'force-dynamic';
+
 export default async function IslandPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const island = await getIsland(slug);

@@ -1,6 +1,8 @@
 import { getIslandsWithStats } from '@/lib/db/queries';
 import PreInputTool from './PreInputTool';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PreInputPage() {
   const islands = await getIslandsWithStats();
   return (

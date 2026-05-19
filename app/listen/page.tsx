@@ -1,6 +1,8 @@
 import { getIslandsWithStats, getAllListenSentences } from '@/lib/db/queries';
 import ListenPlayer from './ListenPlayer';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ListenPage() {
   const [sentences, islands] = await Promise.all([getAllListenSentences(), getIslandsWithStats()]);
   return (

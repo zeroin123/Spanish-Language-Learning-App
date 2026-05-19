@@ -1,6 +1,8 @@
 import { getIslandsWithStats } from '@/lib/db/queries';
 import AddForm from './AddForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AddPage() {
   let islands: Awaited<ReturnType<typeof getIslandsWithStats>> = [];
   try {
