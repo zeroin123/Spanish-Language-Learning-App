@@ -1,9 +1,9 @@
 // Book ingestion script. Run: pnpm seed
-// Parses Colloquial_Spanish.md → populates DB with islands, sentences, vocab
+// Uses static translations for lessons 6-15 (no AI API needed for seeding).
 // Uses @libsql/client — works with local file: URL or remote Turso URL
 
 import { createClient } from '@libsql/client';
-import { translateSentences } from '../lib/ai';
+import { STATIC_PAIRS } from './static-translations';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -182,6 +182,14 @@ async function main() {
   }
   const db = createClient({ url: dbUrl, authToken: process.env.TURSO_AUTH_TOKEN });
 
+  // Wipe existing data so re-seeding doesn't duplicate
+  await db.executeMultiple(`
+    DELETE FROM vocab_entries;
+    DELETE FROM sentences;
+    DELETE FROM islands;
+    DELETE FROM settings;
+  `).catch(() => {}); // ignore if tables don't exist yet
+
   // Create tables
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -292,57 +300,57 @@ async function main() {
   for (const chunk of lessonChunks) {
     const { num, text } = chunk;
     const islandId = islandByLesson.get(num)!;
-    const hasTranslation = num <= 5;
 
-    const dialogueRe = /#### Dialogue (\d+)([\s\S]*?)(?=#### Dialogue \d+|##### Vocabulary building|### Lesson|### Spanish|$)/gi;
-    let dm: RegExpExecArray | null;
-
-    while ((dm = dialogueRe.exec(text)) !== null) {
-      const dialogueNum = parseInt(dm[1]);
-      const dialogueText = dm[2];
-      const allLines = extractSpeakerLines(dialogueText);
-      let pairs: SentencePair[] = [];
-
-      if (hasTranslation) {
-        const { spanish, english } = splitSpanishEnglish(allLines);
-        if (english.length === 0 && spanish.length > 0) {
-          console.log(`  Lesson ${num} D${dialogueNum}: No English found, translating ${spanish.length} lines via AI...`);
-          try {
-            const translated = await translateSentences(spanish.map(l => l.line), 'Spanish', 'English');
-            pairs = spanish.map((sp, i) => ({ spanish: sp.line, english: translated[i]?.translated ?? '', speaker: sp.speaker }));
-          } catch (e) { console.warn(`  AI translation failed: ${e}`); }
-        } else {
-          pairs = buildPairs(spanish, english);
-          const diff = Math.abs(spanish.length - english.length);
-          if (diff > 2) unmatchedPairs += diff;
-        }
-      } else {
-        const spanishLines = allLines.filter(l => isSpanish(l.line));
-        if (spanishLines.length > 0) {
-          console.log(`  Lesson ${num} D${dialogueNum}: Translating ${spanishLines.length} lines via AI...`);
-          try {
-            const translated = await translateSentences(spanishLines.map(l => l.line), 'Spanish', 'English');
-            pairs = spanishLines.map((sp, i) => ({ spanish: sp.line, english: translated[i]?.translated ?? '', speaker: sp.speaker }));
-          } catch (e) {
-            console.warn(`  AI translation failed: ${e}`);
-            pairs = spanishLines.map(sp => ({ spanish: sp.line, english: '', speaker: sp.speaker }));
-          }
-        }
-      }
-
-      for (const pair of pairs) {
-        if (!pair.spanish.trim()) continue;
+    if (num >= 6) {
+      // Lessons 6-15: use hand-translated static pairs — no AI call
+      const staticForLesson = STATIC_PAIRS.filter(p => p.lesson === num);
+      console.log(`  Lesson ${num}: ${staticForLesson.length} static pairs`);
+      for (const pair of staticForLesson) {
         await db.execute({
           sql: `INSERT OR IGNORE INTO sentences
                   (id, island_id, native, target, speaker, source, source_lesson_id, source_dialogue, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 'book', ?, ?, ?, ?)`,
-          args: [randomUUID(), islandId, pair.english || pair.spanish, pair.spanish, pair.speaker, num, dialogueNum, now, now],
+          args: [randomUUID(), islandId, pair.english, pair.spanish, pair.speaker, pair.lesson, pair.dialogue, now, now],
         });
         totalSentences++;
       }
+    } else {
+      // Lessons 1-5: parse book text (bilingual layout) and translate via AI where needed
+      const hasTranslation = num <= 5;
+      const dialogueRe = /#### Dialogue (\d+)([\s\S]*?)(?=#### Dialogue \d+|##### Vocabulary building|### Lesson|### Spanish|$)/gi;
+      let dm: RegExpExecArray | null;
+
+      while ((dm = dialogueRe.exec(text)) !== null) {
+        const dialogueNum = parseInt(dm[1]);
+        const dialogueText = dm[2];
+        const allLines = extractSpeakerLines(dialogueText);
+        let pairs: SentencePair[] = [];
+
+        if (hasTranslation) {
+          const { spanish, english } = splitSpanishEnglish(allLines);
+          if (english.length === 0 && spanish.length > 0) {
+            console.log(`  Lesson ${num} D${dialogueNum}: No English found, skipping (no AI during seeding)`);
+          } else {
+            pairs = buildPairs(spanish, english);
+            const diff = Math.abs(spanish.length - english.length);
+            if (diff > 2) unmatchedPairs += diff;
+          }
+        }
+
+        for (const pair of pairs) {
+          if (!pair.spanish.trim()) continue;
+          await db.execute({
+            sql: `INSERT OR IGNORE INTO sentences
+                    (id, island_id, native, target, speaker, source, source_lesson_id, source_dialogue, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, 'book', ?, ?, ?, ?)`,
+            args: [randomUUID(), islandId, pair.english || pair.spanish, pair.spanish, pair.speaker, num, dialogueNum, now, now],
+          });
+          totalSentences++;
+        }
+      }
     }
 
-    // Vocabulary
+    // Vocabulary (all lessons)
     const vocabItems = extractVocabFromText(text);
     for (const item of vocabItems) {
       await db.execute({

@@ -2,7 +2,12 @@ import { getIslandsWithStats } from '@/lib/db/queries';
 import AddForm from './AddForm';
 
 export default async function AddPage() {
-  const islands = await getIslandsWithStats();
+  let islands: Awaited<ReturnType<typeof getIslandsWithStats>> = [];
+  try {
+    islands = await getIslandsWithStats();
+  } catch (err) {
+    console.error('AddPage: failed to load islands', err);
+  }
   return (
     <main className="min-h-dvh px-4 py-8 max-w-2xl mx-auto">
       <div className="mb-8">

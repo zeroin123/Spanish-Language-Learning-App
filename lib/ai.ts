@@ -1,6 +1,6 @@
 // AI provider abstraction. Set AI_PROVIDER=ollama|openai|claude in .env.local
 
-const PROVIDER = process.env.AI_PROVIDER ?? 'ollama';
+const PROVIDER = process.env.AI_PROVIDER ?? 'openai';
 const OLLAMA_BASE = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2:3b';
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
@@ -90,10 +90,7 @@ export function extractPairsFromRaw(raw: string): TranslationPair[] {
 
 async function translateOne(sentence: string, fromLang: string, toLang: string): Promise<string> {
   const prompt = `Translate this ${fromLang} sentence to ${toLang}. Use natural, conversational language (Iberian Spanish conventions if applicable). Reply with ONLY the translation, nothing else.\n\n${sentence}`;
-  // Use plain text mode for Ollama (no JSON format enforcement)
-  if (PROVIDER !== 'claude') {
-    return callOllama(prompt, false);
-  }
+  if (PROVIDER === 'ollama') return callOllama(prompt, false);
   return callAI(prompt);
 }
 
