@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { getDueQueue, getTotalDueCount } from '@/lib/db/queries';
+import { getDueQueue, getTotalDueCount, getSessionCap } from '@/lib/db/queries';
 import RecallSession from './RecallSession';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RecallPage() {
-  const SESSION_CAP = 30;
+  const SESSION_CAP = await getSessionCap();
   const [cards, totalDue] = await Promise.all([getDueQueue(SESSION_CAP), getTotalDueCount()]);
 
   if (cards.length === 0) {

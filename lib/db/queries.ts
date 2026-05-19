@@ -36,6 +36,16 @@ export type IslandRow = {
   color: string;
 };
 
+export async function getSessionCap(): Promise<number> {
+  try {
+    const db = getDb();
+    const { rows } = await db.execute('SELECT session_card_cap FROM settings WHERE id = 1');
+    return rows.length > 0 ? ((rows[0].session_card_cap as number) ?? 30) : 30;
+  } catch {
+    return 30;
+  }
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   const db = getDb();
   const now = new Date().toISOString();

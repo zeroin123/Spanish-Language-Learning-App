@@ -26,6 +26,7 @@ const ISLAND_DEFS = [
   { lesson: 13, slug: 'emergencies',      name: 'Emergencies',               emoji: '🚨', color: '#C0392B' },
   { lesson: 14, slug: 'future',           name: 'Hopes for the Future',      emoji: '🌟', color: '#16A085' },
   { lesson: 15, slug: 'social',           name: 'Invitations & Socializing', emoji: '🥂', color: '#D35400' },
+  { lesson: 16, slug: 'other',            name: 'Other',                     emoji: '📝', color: '#6B7280' },
 ] as const;
 
 const LESSON_NUMBER_MAP: Record<string, number> = {

@@ -1,11 +1,15 @@
 import Link from 'next/link';
-import { getDashboardStats, getIslandsWithStats, type IslandStat } from '@/lib/db/queries';
+import { getDashboardStats, getIslandsWithStats, getSessionCap, type IslandStat } from '@/lib/db/queries';
+import DailyCapWidget from './DailyCapWidget';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  const stats = await getDashboardStats();
-  const islands = await getIslandsWithStats();
+  const [stats, islands, sessionCap] = await Promise.all([
+    getDashboardStats(),
+    getIslandsWithStats(),
+    getSessionCap(),
+  ]);
 
   return (
     <main className="min-h-dvh px-4 py-10 max-w-4xl mx-auto">
@@ -51,6 +55,11 @@ export default async function Dashboard() {
         <QuickAction href="/recall"     icon={<CardsIcon />}      label="Review"        sub={`${stats.dueToday} due`} color="#D97706" />
         <QuickAction href="/listen"     icon={<HeadphonesIcon />} label="Listen"        sub="Shadow mode"           color="#0D9488" />
         <QuickAction href="/pre-input"  icon={<ClipboardIcon />}  label="Pre-input"     sub="Extract vocab"         color="#7C3AED" />
+      </div>
+
+      {/* Daily cap setting */}
+      <div className="mb-8">
+        <DailyCapWidget initialCap={sessionCap} />
       </div>
 
       {/* Islands */}

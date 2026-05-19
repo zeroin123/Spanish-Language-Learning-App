@@ -32,6 +32,15 @@ export async function addSentencesAction(
   }
 }
 
+export async function updateSessionCapAction(cap: number): Promise<void> {
+  const db = getDb();
+  const clamped = Math.max(30, Math.floor(cap));
+  await db.execute({
+    sql: 'UPDATE settings SET session_card_cap = ? WHERE id = 1',
+    args: [clamped],
+  });
+}
+
 export async function gradeCardAction(id: string, grade: 0 | 1 | 2 | 3): Promise<void> {
   const db = getDb();
   const { rows } = await db.execute({
