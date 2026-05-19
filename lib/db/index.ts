@@ -1,7 +1,3 @@
-// Phase 1: DB access is via node:sqlite directly in scripts/seed.ts
-// Phase 2: This will be replaced with drizzle + @libsql/client (no native compilation needed)
-// To use drizzle in app routes: install @libsql/client and use drizzle-orm/libsql adapter
-
 import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 
