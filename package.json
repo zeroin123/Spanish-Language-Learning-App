@@ -1,0 +1,42 @@
+{
+  "name": "polyglot-islands",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "tsx --no-warnings=ExperimentalWarning --env-file=.env.local scripts/seed.ts",
+    "seed:static": "tsx --no-warnings=ExperimentalWarning scripts/seed-static.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.44.2",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.19",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "nanoid": "^5.1.11",
+    "picocolors": "^1.1.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.0",
+    "typescript": "^5",
+    "vitest": "^4.1.6"
+  }
+}

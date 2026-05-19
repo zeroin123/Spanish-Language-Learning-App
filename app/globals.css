@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&display=swap');
+@import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────────────────── */
+@theme inline {
+  /* Page backgrounds */
+  --color-page:      #FDFCF8;
+  --color-surface:   #FFFFFF;
+  --color-raised:    #F7F2EA;
+  --color-subtle:    #EDE8DF;
+
+  /* Brand */
+  --color-terra:        #C85A3A;
+  --color-terra-hover:  #B04E31;
+  --color-amber:        #D97706;
+  --color-amber-light:  #FEF3C7;
+  --color-teal:         #0D9488;
+  --color-teal-light:   #CCFBF1;
+
+  /* Text */
+  --color-ink:      #1C1917;
+  --color-body:     #44403C;
+  --color-muted:    #78716C;
+  --color-faint:    #A8A29E;
+
+  /* Borders */
+  --color-border:        #E7E0D5;
+  --color-border-strong: #D0C5B8;
+
+  /* Status */
+  --color-danger: #DC2626;
+
+  /* Fonts */
+  --font-sans:   'DM Sans', system-ui, sans-serif;
+  --font-serif:  'Playfair Display', Georgia, serif;
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+/* ── Typography ────────────────────────────────────────────────── */
+.font-display { font-family: var(--font-serif); }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-page); }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+/* ── Focus ring ────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Select dropdown arrow ─────────────────────────────────────── */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2378716C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px !important;
+}
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(100, 60, 20, 0.06), 0 0 0 0.5px rgba(100,60,20,0.03);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+.card:hover {
+  box-shadow: 0 4px 12px rgba(100, 60, 20, 0.09), 0 1px 3px rgba(100,60,20,0.05);
+  border-color: var(--color-border-strong);
+}
+
+/* ── Divider ───────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--color-border-strong), transparent);
+  opacity: 0.6;
+}
+
+/* ── Pill badge ────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
