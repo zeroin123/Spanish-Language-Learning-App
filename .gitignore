@@ -40,6 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# SQLite database — contains your personal sentence data, never commit
-/data/
+# SQLite WAL/journal files (never commit these)
+/data/*.db-shm
+/data/*.db-wal
+/data/*.db-journal
 .cgr-hash-cache.json

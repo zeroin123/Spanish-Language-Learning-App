@@ -1,5 +1,4 @@
 {
-  "buildCommand": "npx tsx --no-warnings=ExperimentalWarning scripts/seed-static.ts && next build",
   "framework": "nextjs",
   "env": {
     "NODE_OPTIONS": "--experimental-sqlite"
