@@ -10,6 +10,7 @@
     "seed": "tsx --no-warnings=ExperimentalWarning --env-file=.env.local scripts/seed.ts",
     "seed:static": "tsx --no-warnings=ExperimentalWarning scripts/seed-static.ts",
     "seed:other": "tsx --no-warnings=ExperimentalWarning --env-file=.env.local scripts/add-other-island.ts",
+    "split-sentences": "tsx --no-warnings=ExperimentalWarning --env-file=.env.local scripts/split-sentences.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
