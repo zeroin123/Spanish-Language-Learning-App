@@ -206,3 +206,155 @@ export async function getIslandSentences(islandId: string): Promise<SentenceRow[
     nextReview: r.next_review as string | null,
   }));
 }
+
+/* ── Review History ──────────────────────────────────────────── */
+
+export type HistoryBucket = { label: string; date: string; count: number };
+
+export type ReviewHistoryData = {
+  buckets: HistoryBucket[];
+  currentStreak: number;
+  thisWeekReviews: number;
+  bestBucketCount: number;
+};
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function shiftDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function computeStreak(daily: HistoryBucket[]): number {
+  // daily is oldest-first; walk backward from today
+  const reversed = [...daily].reverse();
+  let streak = 0;
+  for (const bucket of reversed) {
+    if (bucket.count > 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function buildDailyBuckets(
+  dbMap: Map<string, number>,
+  today: Date,
+): HistoryBucket[] {
+  const buckets: HistoryBucket[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = shiftDays(today, -i);
+    const date = isoDate(d);
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
+    buckets.push({ label, date, count: dbMap.get(date) ?? 0 });
+  }
+  return buckets;
+}
+
+function buildWeeklyBuckets(
+  dbMap: Map<string, number>,
+  today: Date,
+): HistoryBucket[] {
+  const buckets: HistoryBucket[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const weekStart = shiftDays(today, -i * 7 - today.getDay());
+    const yearStr = weekStart.getFullYear().toString();
+    // Compute ISO week number
+    const jan1 = new Date(weekStart.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((weekStart.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+    const key = `${yearStr}-${String(weekStart.getMonth() + 1).padStart(2, '0')}`; // fallback
+    // Use strftime-style key: YYYY-WW
+    const wKey = `${yearStr}-${String(weekNum).padStart(2, '0')}`;
+    const label = `W${weekNum}`;
+    buckets.push({ label, date: isoDate(weekStart), count: dbMap.get(wKey) ?? 0 });
+  }
+  return buckets;
+}
+
+function buildMonthlyBuckets(
+  dbMap: Map<string, number>,
+  today: Date,
+): HistoryBucket[] {
+  const buckets: HistoryBucket[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-US', { month: 'short' });
+    buckets.push({ label, date: isoDate(d), count: dbMap.get(key) ?? 0 });
+  }
+  return buckets;
+}
+
+export async function getReviewHistory(): Promise<{
+  daily: ReviewHistoryData;
+  weekly: ReviewHistoryData;
+  monthly: ReviewHistoryData;
+}> {
+  try {
+    const db = getDb();
+    const today = new Date();
+
+    const dailyStart  = isoDate(shiftDays(today, -13));
+    const weeklyStart = isoDate(shiftDays(today, -83));
+    const monthlyStart = isoDate(new Date(today.getFullYear(), today.getMonth() - 11, 1));
+    const weekAgo = shiftDays(today, -7).toISOString();
+
+    const [dailyRows, weeklyRows, monthlyRows, weekRow] = await Promise.all([
+      db.execute({
+        sql: `SELECT DATE(last_reviewed) AS bucket, COUNT(*) AS cnt
+              FROM sentences
+              WHERE last_reviewed IS NOT NULL AND DATE(last_reviewed) >= ?
+              GROUP BY DATE(last_reviewed) ORDER BY bucket ASC`,
+        args: [dailyStart],
+      }),
+      db.execute({
+        sql: `SELECT strftime('%Y-%W', last_reviewed) AS bucket, COUNT(*) AS cnt
+              FROM sentences
+              WHERE last_reviewed IS NOT NULL AND DATE(last_reviewed) >= ?
+              GROUP BY strftime('%Y-%W', last_reviewed) ORDER BY bucket ASC`,
+        args: [weeklyStart],
+      }),
+      db.execute({
+        sql: `SELECT strftime('%Y-%m', last_reviewed) AS bucket, COUNT(*) AS cnt
+              FROM sentences
+              WHERE last_reviewed IS NOT NULL AND DATE(last_reviewed) >= ?
+              GROUP BY strftime('%Y-%m', last_reviewed) ORDER BY bucket ASC`,
+        args: [monthlyStart],
+      }),
+      db.execute({
+        sql: `SELECT COUNT(*) AS cnt FROM sentences WHERE last_reviewed >= ?`,
+        args: [weekAgo],
+      }),
+    ]);
+
+    const toMap = (rows: typeof dailyRows.rows) =>
+      new Map(rows.map(r => [r.bucket as string, r.cnt as number]));
+
+    const dailyBuckets   = buildDailyBuckets(toMap(dailyRows.rows), today);
+    const weeklyBuckets  = buildWeeklyBuckets(toMap(weeklyRows.rows), today);
+    const monthlyBuckets = buildMonthlyBuckets(toMap(monthlyRows.rows), today);
+
+    const currentStreak   = computeStreak(dailyBuckets);
+    const thisWeekReviews = (weekRow.rows[0].cnt as number) ?? 0;
+
+    const makeData = (buckets: HistoryBucket[]): ReviewHistoryData => ({
+      buckets,
+      currentStreak,
+      thisWeekReviews,
+      bestBucketCount: Math.max(...buckets.map(b => b.count), 0),
+    });
+
+    return {
+      daily:   makeData(dailyBuckets),
+      weekly:  makeData(weeklyBuckets),
+      monthly: makeData(monthlyBuckets),
+    };
+  } catch {
+    const empty: ReviewHistoryData = {
+      buckets: [], currentStreak: 0, thisWeekReviews: 0, bestBucketCount: 0,
+    };
+    return { daily: empty, weekly: empty, monthly: empty };
+  }
+}
